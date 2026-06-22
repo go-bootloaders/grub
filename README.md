@@ -8,12 +8,15 @@ Pure-Go (`CGO=0`) **GRUB administration toolkit** for disk images. It is a
 production consumer of the storage / firmware / boot stack:
 
 - **[go-volumes/gpt](https://github.com/go-volumes/gpt)** locates the EFI System
-  Partition (and, for inspection, the Linux `/boot` partition) inside a GPT
-  disk image.
-- **[go-filesystems/detect](https://github.com/go-filesystems/detect)** +
-  **[go-filesystems/fat32](https://github.com/go-filesystems/fat32)** mount the
-  ESP (FAT32) **read/write** behind the common `filesystem.Filesystem` API — so
-  `grub.cfg` is edited as a real file, not by raw byte surgery on the image.
+  Partition and the Linux `/boot` (or root) partition inside a GPT disk image.
+- **[go-filesystems/detect](https://github.com/go-filesystems/detect)** probes
+  each partition's filesystem type, then grub mounts it **read/write** behind
+  the common `filesystem.Filesystem` API through the matching in-place driver —
+  **[fat32](https://github.com/go-filesystems/fat32)** for the ESP and
+  **[ext4](https://github.com/go-filesystems/ext4)** or
+  **[btrfs](https://github.com/go-filesystems/btrfs)** for `/boot`. So
+  `grub.cfg` is edited as a real file, not by raw byte surgery on the image, on
+  both the ESP and a Debian-style `/boot`.
 - **[go-filesystems/uefi](https://github.com/go-filesystems/uefi)** registers a
   GRUB UEFI boot entry (`Boot####` / `BootOrder`).
 - **[go-tpm2/efitcg2](https://github.com/go-tpm2/efitcg2)** measures the
@@ -29,16 +32,22 @@ github.com/go-bootloaders/grub
 
 ## What it does
 
-| Capability                | Entry point                              |
-| ------------------------- | ---------------------------------------- |
-| Open + mount ESP (R/W)    | `OpenImage(path) (*Image, error)`        |
-| Read / locate `grub.cfg`  | `(*Image).ReadGrubCfg`, `LocateGrubCfg`  |
-| De-`quiet` / add consoles | `(*Image).PatchQuiet`, `PatchQuietImage` |
-| Generate a `grub.cfg`     | `(*Image).MkConfig`, `GenerateConfig`    |
-| Discover kernels/initrds  | `DiscoverKernels`                        |
-| UEFI boot entry           | `BuildBootEntry`, `RegisterBootEntry`    |
-| Measured boot (TPM)       | `NewMeasurer`, `(*Image).MeasureBoot`    |
-| BIOS boot-code install    | `InstallToSectors`, `InstallMBR`         |
+| Capability                     | ESP entry point                          | `/boot` (ext4/btrfs) entry point  |
+| ------------------------------ | ---------------------------------------- | --------------------------------- |
+| Open + mount ESP **and** /boot | `OpenImage(path) (*Image, error)`        | same call; `Boot()`, `BootType()` |
+| Read / locate `grub.cfg`       | `(*Image).ReadGrubCfg`, `LocateGrubCfg`  | `(*Image).ReadGrubCfgOnBoot`      |
+| De-`quiet` / add consoles      | `(*Image).PatchQuiet`, `PatchQuietImage` | `(*Image).PatchQuietOnBoot`       |
+| Generate a `grub.cfg`          | `(*Image).MkConfig`, `GenerateConfig`    | `(*Image).MkConfigOnBoot`         |
+| Discover kernels/initrds       | `DiscoverKernels(im.ESP())`              | `DiscoverKernels(im.Boot())`      |
+| UEFI boot entry                | `BuildBootEntry`, `RegisterBootEntry`    | —                                 |
+| Measured boot (TPM)            | `NewMeasurer`, `(*Image).MeasureBoot`    | `(*Image).MeasureBootOnBoot`      |
+| BIOS boot-code install         | `InstallToSectors`, `InstallMBR`         | —                                 |
+
+`PatchQuietImage` is a one-call convenience that patches **both** the ESP and a
+mounted `/boot` `grub.cfg`. The `/boot` filesystem is mounted in place by the
+ext4/btrfs driver, so `WriteFile` (and therefore `PatchQuietOnBoot` /
+`MkConfigOnBoot`) persists back to the partition — full read **and** write, not
+the read-only temp-file staging the `detect` adapter would give.
 
 All `grub.cfg` editing is performed through the mounted filesystem's
 `ReadFile` / `WriteFile`. There is **no** same-length raw-byte patching of the
@@ -96,15 +105,34 @@ Validated on all six 64-bit Go targets: `amd64`, `arm64`, `riscv64`, `loong64`,
 UEFI decoders). Native runners run the full race + coverage suite; the four
 non-native arches run the cross-compiled test binaries under QEMU.
 
-## Known limitation: ext4 `/boot`
+## `/boot` mounting (ext4 / btrfs)
 
-The ESP/FAT32 path is fully supported and resolves cleanly from the public Go
-proxy. Mounting an ext4 Linux `/boot` partition is **not yet** wired in:
-`go-filesystems/ext4` currently pulls in the `go-diskimages` `v0.0.0` + replace
-tangle that does not resolve in an isolated downstream build. `BootPartition()`
-locates the `/boot` partition's geometry today; mounting it is a documented
-follow-up, gated on the org-wide pseudo-version migration. This is by design —
-no faking, no vendor hacks.
+`OpenImage` mounts the Linux `/boot` (or root) partition **read/write** when one
+is present, alongside the ESP. The partition's filesystem type is probed with
+`go-filesystems/detect` and dispatched to the matching in-place driver
+(`ext4.Open` or `btrfs.Open`); both expose a real `WriteFile`, so `grub.cfg`
+discovery, patching, regeneration and TPM measurement all work against
+`/boot/grub/grub.cfg` (and `/boot/grub2/grub.cfg`, `/grub/grub.cfg`) exactly as
+they do against the ESP:
+
+```go
+im, _ := grub.OpenImage("disk.img")
+defer im.Close()
+
+if im.HasBoot() {                      // a Linux partition was mounted
+    fmt.Println(im.BootType())         // detect.Ext4 or detect.Btrfs
+    cfg, content, _ := im.ReadGrubCfgOnBoot()
+    kernels, _ := grub.DiscoverKernels(im.Boot())
+    im.PatchQuietOnBoot()              // persists to the ext4/btrfs partition
+    im.MkConfigOnBoot(grub.MkConfigOptions{Distributor: "Debian"})
+}
+```
+
+A Linux partition holding an unsupported filesystem (neither ext4 nor btrfs) is
+reported as `ErrUnsupportedBootFS` rather than silently skipped; an image with
+no Linux partition simply has no `/boot` mount (`HasBoot()` is `false`, the
+`*OnBoot` methods return `ErrNoBoot`). All deps resolve cleanly from the public
+Go proxy by pseudo-version — no `replace => ../sibling`, no vendoring.
 
 ## License
 

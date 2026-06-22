@@ -11,18 +11,19 @@ permissions:
   contents: read
 
 env:
-  # The module composes with go-filesystems/interface as a sibling checkout
-  # (its drivers reference it via `replace => ../interface`, which does not
-  # survive transitive importing — so we provide the replace here too). All
-  # other deps resolve from the public proxy. GOWORK=off keeps any developer
-  # go.work out of CI.
+  # All deps — including the go-filesystems drivers (interface/detect/fat32/
+  # ext4/btrfs/uefi), go-volumes/gpt and go-tpm2 — resolve cleanly from the
+  # public proxy by pseudo-version after the org-wide migration off
+  # `replace => ../sibling`. No sibling checkout is needed. GOWORK=off keeps any
+  # developer go.work out of CI; -mod=mod lets the proxy fill the graph.
   GOWORK: off
 
 jobs:
   # --------------------------------------------------------------------------
   # Native runners: full race + coverage suite. The coverage gate is enforced
-  # here. The GPT+ESP disk-image round-trip, the UEFI varstore boot-entry, and
-  # the TPM PCR-extend (fake Caller) tests all run.
+  # here. The GPT+ESP(FAT32)+/boot(ext4/btrfs) disk-image round-trip (real
+  # in-tree Format), grub.cfg/kernel discovery on /boot, the UEFI varstore
+  # boot-entry, and the TPM PCR-extend (fake Caller) tests all run.
   # --------------------------------------------------------------------------
   native:
     name: native ${{ matrix.arch }}
@@ -37,22 +38,14 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     env:
       # Coverage floor on the combined (-coverpkg=./...) profile. Measured at
-      # 93.7% locally; gate just below so the build stays green while still
-      # catching regressions.
+      # 93.9% locally (incl. the ext4/btrfs /boot mount + discovery paths); gate
+      # just below so the build stays green while still catching regressions.
       COVERAGE_FLOOR: "90.0"
     steps:
       - name: Checkout grub
         uses: actions/checkout@v4
         with:
           path: grub
-
-      # go.mod carries `replace github.com/go-filesystems/interface =>
-      # ../interface`, so the sibling module must sit next to this one.
-      - name: Checkout interface (sibling replace target)
-        uses: actions/checkout@v4
-        with:
-          repository: go-filesystems/interface
-          path: interface
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -123,12 +116,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: grub
-
-      - name: Checkout interface (sibling replace target)
-        uses: actions/checkout@v4
-        with:
-          repository: go-filesystems/interface
-          path: interface
 
       - name: Set up Go
         uses: actions/setup-go@v5

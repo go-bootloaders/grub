@@ -174,6 +174,34 @@ func quoteMenuTitle(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
+// mkConfigFS discovers the kernels on fs, generates a grub.cfg, and writes it
+// to the conventional location (an existing grub.cfg path if present, else
+// /grub/grub.cfg). label names the filesystem ("ESP" or "/boot") for errors.
+// It is the shared core behind MkConfig and MkConfigOnBoot.
+func mkConfigFS(fs filesystem.Filesystem, opts MkConfigOptions, label string) (cfgPath string, entries int, err error) {
+	kernels, err := DiscoverKernels(fs)
+	if err != nil {
+		return "", 0, err
+	}
+	if len(kernels) == 0 {
+		return "", 0, fmt.Errorf("grub: MkConfig: no kernels found on %s", label)
+	}
+	content := GenerateConfig(kernels, opts)
+
+	// Prefer an existing grub.cfg location; otherwise default to /grub/grub.cfg.
+	target, err := LocateGrubCfg(fs)
+	if err != nil {
+		target = "/grub/grub.cfg"
+		if mkErr := mkDirAll(fs, path.Dir(target)); mkErr != nil {
+			return "", 0, fmt.Errorf("grub: MkConfig: create dir: %w", mkErr)
+		}
+	}
+	if err := writeGrubCfgFS(fs, target, content); err != nil {
+		return "", 0, err
+	}
+	return target, len(kernels), nil
+}
+
 // MkConfig discovers the kernels on the mounted ESP, generates a grub.cfg, and
 // writes it to the conventional ESP location (/grub/grub.cfg, or the path of an
 // existing grub.cfg if one is already present). It returns the path written and
@@ -182,27 +210,19 @@ func quoteMenuTitle(s string) string {
 // This replaces the former no-op stub: it produces a real, valid configuration
 // from on-disk kernels rather than returning nil.
 func (im *Image) MkConfig(opts MkConfigOptions) (cfgPath string, entries int, err error) {
-	kernels, err := DiscoverKernels(im.esp)
-	if err != nil {
-		return "", 0, err
-	}
-	if len(kernels) == 0 {
-		return "", 0, fmt.Errorf("grub: MkConfig: no kernels found on ESP")
-	}
-	content := GenerateConfig(kernels, opts)
+	return mkConfigFS(im.esp, opts, "ESP")
+}
 
-	// Prefer an existing grub.cfg location; otherwise default to /grub/grub.cfg.
-	target, err := LocateGrubCfg(im.esp)
-	if err != nil {
-		target = "/grub/grub.cfg"
-		if mkErr := mkDirAll(im.esp, path.Dir(target)); mkErr != nil {
-			return "", 0, fmt.Errorf("grub: MkConfig: create dir: %w", mkErr)
-		}
+// MkConfigOnBoot is MkConfig against the mounted /boot filesystem (ext4/btrfs):
+// it scans /boot for vmlinuz*/initrd* kernels and writes the generated grub.cfg
+// to /boot/grub/grub.cfg (or an existing config path). It returns ErrNoBoot
+// when no /boot is mounted. The ext4/btrfs drivers persist the write to the
+// disk image.
+func (im *Image) MkConfigOnBoot(opts MkConfigOptions) (cfgPath string, entries int, err error) {
+	if !im.hasBoot {
+		return "", 0, ErrNoBoot
 	}
-	if err := im.WriteGrubCfg(target, content); err != nil {
-		return "", 0, err
-	}
-	return target, len(kernels), nil
+	return mkConfigFS(im.boot, opts, "/boot")
 }
 
 // mkDirAll creates dir and all missing parents on a mounted filesystem,

@@ -3,6 +3,7 @@ package grub
 import (
 	"fmt"
 
+	filesystem "github.com/go-filesystems/interface"
 	"github.com/go-tpm2/efitcg2"
 )
 
@@ -67,12 +68,11 @@ func (m *Measurer) MeasureLoadedImage(desc string, image []byte) error {
 	return nil
 }
 
-// MeasureBoot measures a complete GRUB boot into the conventional PCRs from a
-// mounted Image: the grub.cfg into PCR 8, and every discovered kernel/initrd
-// into PCR 9. It is the convenience entry point that ties OpenImage to the TPM.
-// Returns the number of measurements made.
-func (im *Image) MeasureBoot(m *Measurer) (int, error) {
-	_, content, err := im.ReadGrubCfg()
+// measureBootFS measures the grub.cfg + discovered kernels/initrds on fs into
+// the conventional PCRs. It is the shared core behind MeasureBoot and
+// MeasureBootOnBoot.
+func measureBootFS(fs filesystem.Filesystem, m *Measurer) (int, error) {
+	_, content, err := ReadGrubCfgFS(fs)
 	if err != nil {
 		return 0, err
 	}
@@ -82,12 +82,12 @@ func (im *Image) MeasureBoot(m *Measurer) (int, error) {
 	}
 	count++
 
-	kernels, err := DiscoverKernels(im.esp)
+	kernels, err := DiscoverKernels(fs)
 	if err != nil {
 		return count, err
 	}
 	for _, k := range kernels {
-		data, rerr := im.esp.ReadFile(k.KernelPath)
+		data, rerr := fs.ReadFile(k.KernelPath)
 		if rerr != nil {
 			return count, fmt.Errorf("grub: read kernel %s: %w", k.KernelPath, rerr)
 		}
@@ -96,7 +96,7 @@ func (im *Image) MeasureBoot(m *Measurer) (int, error) {
 		}
 		count++
 		if k.InitrdPath != "" {
-			idata, rerr := im.esp.ReadFile(k.InitrdPath)
+			idata, rerr := fs.ReadFile(k.InitrdPath)
 			if rerr != nil {
 				return count, fmt.Errorf("grub: read initrd %s: %w", k.InitrdPath, rerr)
 			}
@@ -107,4 +107,22 @@ func (im *Image) MeasureBoot(m *Measurer) (int, error) {
 		}
 	}
 	return count, nil
+}
+
+// MeasureBoot measures a complete GRUB boot into the conventional PCRs from a
+// mounted Image: the ESP grub.cfg into PCR 8, and every discovered
+// kernel/initrd into PCR 9. It is the convenience entry point that ties
+// OpenImage to the TPM. Returns the number of measurements made.
+func (im *Image) MeasureBoot(m *Measurer) (int, error) {
+	return measureBootFS(im.esp, m)
+}
+
+// MeasureBootOnBoot measures the grub.cfg + kernels/initrds resident on the
+// mounted /boot filesystem (ext4/btrfs) into the conventional PCRs. It returns
+// ErrNoBoot when no /boot is mounted.
+func (im *Image) MeasureBootOnBoot(m *Measurer) (int, error) {
+	if !im.hasBoot {
+		return 0, ErrNoBoot
+	}
+	return measureBootFS(im.boot, m)
 }
