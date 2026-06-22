@@ -1,0 +1,183 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # The module composes with go-filesystems/interface as a sibling checkout
+  # (its drivers reference it via `replace => ../interface`, which does not
+  # survive transitive importing — so we provide the replace here too). All
+  # other deps resolve from the public proxy. GOWORK=off keeps any developer
+  # go.work out of CI.
+  GOWORK: off
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Native runners: full race + coverage suite. The coverage gate is enforced
+  # here. The GPT+ESP disk-image round-trip, the UEFI varstore boot-entry, and
+  # the TPM PCR-extend (fake Caller) tests all run.
+  # --------------------------------------------------------------------------
+  native:
+    name: native ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runs-on: ubuntu-latest
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runs-on }}
+    env:
+      # Coverage floor on the combined (-coverpkg=./...) profile. Measured at
+      # 93.7% locally; gate just below so the build stays green while still
+      # catching regressions.
+      COVERAGE_FLOOR: "90.0"
+    steps:
+      - name: Checkout grub
+        uses: actions/checkout@v4
+        with:
+          path: grub
+
+      # go.mod carries `replace github.com/go-filesystems/interface =>
+      # ../interface`, so the sibling module must sit next to this one.
+      - name: Checkout interface (sibling replace target)
+        uses: actions/checkout@v4
+        with:
+          repository: go-filesystems/interface
+          path: interface
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          check-latest: true
+          cache: true
+          cache-dependency-path: grub/go.mod
+
+      - name: Vet
+        working-directory: grub
+        run: go vet -mod=mod ./...
+
+      - name: Build
+        working-directory: grub
+        run: go build -mod=mod ./...
+
+      - name: Test (race + coverage)
+        working-directory: grub
+        env:
+          CGO_ENABLED: "1"
+        run: go test -mod=mod -race -coverprofile=cover.out -covermode=atomic -coverpkg=./... ./...
+
+      - name: Enforce coverage gate
+        working-directory: grub
+        run: |
+          set -euo pipefail
+          pct=$(go tool cover -func=cover.out | awk '/^total:/ {sub(/%/,"",$3); print $3}')
+          echo "total coverage: ${pct}% (floor: ${COVERAGE_FLOOR}%)"
+          awk -v p="$pct" -v f="$COVERAGE_FLOOR" \
+            'BEGIN { exit (p+0 >= f+0) ? 0 : 1 }' \
+            || { echo "coverage ${pct}% below gate ${COVERAGE_FLOOR}%"; exit 1; }
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.arch }}
+          path: grub/cover.out
+          if-no-files-found: ignore
+
+  # --------------------------------------------------------------------------
+  # Emulated 64-bit arches: cross-compile a static (CGO_ENABLED=0) test binary
+  # and run it under QEMU. s390x is big-endian, exercising the explicit
+  # binary.BigEndian / LittleEndian decoding in the GPT, FAT32 and UEFI deps.
+  # --------------------------------------------------------------------------
+  emulated:
+    name: emulated ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: riscv64
+            image: debian:trixie
+            qemu: rv64,v=true,vlen=128
+          - arch: loong64
+            image: ghcr.io/loong64/debian:trixie
+            qemu: la464
+          - arch: ppc64le
+            image: debian:trixie
+            qemu: power9
+          - arch: s390x
+            image: debian:trixie
+            qemu: qemu
+    steps:
+      - name: Checkout grub
+        uses: actions/checkout@v4
+        with:
+          path: grub
+
+      - name: Checkout interface (sibling replace target)
+        uses: actions/checkout@v4
+        with:
+          repository: go-filesystems/interface
+          path: interface
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          check-latest: true
+          cache: true
+          cache-dependency-path: grub/go.mod
+
+      - name: Register QEMU binfmt handlers
+        run: docker run --rm --privileged tonistiigi/binfmt --install all
+
+      - name: Cross-compile per-package test binaries
+        working-directory: grub
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/tests
+          for pkg in $(go list -mod=mod ./...); do
+            name=$(echo "$pkg" | tr '/' '_')
+            go test -mod=mod -c -cover -o "/tmp/tests/${name}.test" "$pkg"
+          done
+          ls -la /tmp/tests
+
+      - name: Run test binaries under QEMU (${{ matrix.arch }})
+        env:
+          QEMU_CPU: ${{ matrix.qemu }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          bins=(/tmp/tests/*.test)
+          if [ ${#bins[@]} -eq 0 ]; then
+            echo "no test binaries to run"; exit 0
+          fi
+          rc=0
+          for bin in "${bins[@]}"; do
+            echo "::group::$(basename "$bin")"
+            if ! docker run --rm \
+              --platform linux/${{ matrix.arch }} \
+              -e QEMU_CPU="${QEMU_CPU}" \
+              --user 1000:1000 \
+              -v /tmp/tests:/t -w /t \
+              ${{ matrix.image }} \
+              "./$(basename "$bin")" -test.v; then
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $rc
