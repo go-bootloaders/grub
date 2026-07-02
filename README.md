@@ -1,3 +1,5 @@
+<p align="center"><img src="https://raw.githubusercontent.com/go-bootloaders/brand/main/social/go-bootloaders-grub.png" alt="go-bootloaders/grub" width="720"></p>
+
 # grub
 
 [![ci](https://github.com/go-bootloaders/grub/actions/workflows/ci.yml/badge.svg)](https://github.com/go-bootloaders/grub/actions/workflows/ci.yml)
