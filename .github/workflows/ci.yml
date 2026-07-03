@@ -43,12 +43,12 @@ jobs:
       COVERAGE_FLOOR: "90.0"
     steps:
       - name: Checkout grub
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: grub
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: stable
           check-latest: true
@@ -113,12 +113,12 @@ jobs:
             qemu: qemu
     steps:
       - name: Checkout grub
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: grub
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: stable
           check-latest: true
