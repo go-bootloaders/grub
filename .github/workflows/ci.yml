@@ -48,7 +48,7 @@ jobs:
           path: grub
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: stable
           check-latest: true
@@ -81,7 +81,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ matrix.arch }}
           path: grub/cover.out
@@ -118,7 +118,7 @@ jobs:
           path: grub
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: stable
           check-latest: true
