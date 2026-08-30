@@ -12,6 +12,8 @@ github.com/go-filesystems/interface v0.0.0-20260622072638-0b01d4fb163f h1:5HnRec
 github.com/go-filesystems/interface v0.0.0-20260622072638-0b01d4fb163f/go.mod h1:9WZHAmuKzDWHFtncQuJ3rJYWnAcgX3VsupSqYITgftE=
 github.com/go-filesystems/uefi v0.0.0-20260622110039-8bad894e467d h1:nQ+nQXFdra2r6eMuI0zxr9PvYOGXgmycTOTB5T9LWas=
 github.com/go-filesystems/uefi v0.0.0-20260622110039-8bad894e467d/go.mod h1:T4WSiZsRTn8KuQixDMRZchs/BIYEBuYU7KhMLkp2r/4=
+github.com/go-filesystems/uefi v0.1.0 h1:i8rV52ZKtGu7zk2VJHLae39S2vUH4y0Bu97bqE8j+X4=
+github.com/go-filesystems/uefi v0.1.0/go.mod h1:T4WSiZsRTn8KuQixDMRZchs/BIYEBuYU7KhMLkp2r/4=
 github.com/go-tpm2/common v0.1.0 h1:VVxswlksVMyCKE9Ra0k1m8l22YSmCk2je8KGiwtY9bs=
 github.com/go-tpm2/common v0.1.0/go.mod h1:YAn0c2kmze7OPO4Myn9FaEk/c+EayBap0dj7rnROcHs=
 github.com/go-tpm2/efitcg2 v0.2.0 h1:cfGEXybx2Y0f8awn9Z062lIuLB68BxS1W8yZXX9V/RE=
