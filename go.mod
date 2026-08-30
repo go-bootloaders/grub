@@ -10,7 +10,7 @@ require (
 	github.com/go-filesystems/interface v0.0.0-20260622072638-0b01d4fb163f
 	github.com/go-filesystems/uefi v0.0.0-20260622110039-8bad894e467d
 	github.com/go-tpm2/efitcg2 v0.2.0
-	github.com/go-volumes/gpt v0.0.0-20260622100756-3721db1fbd05
+	github.com/go-volumes/gpt v0.0.0-20260830080217-f939ebaffdf6
 )
 
 require (
