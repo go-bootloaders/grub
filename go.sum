@@ -8,6 +8,8 @@ github.com/go-filesystems/detect v0.0.0-20260622110044-5c3e56aa6ab7 h1:1GY9j3Pmh
 github.com/go-filesystems/detect v0.0.0-20260622110044-5c3e56aa6ab7/go.mod h1:OCGE1O8l2Z41PODXWkuJOin83ooqHWh439jSpOGWb/Q=
 github.com/go-filesystems/ext4 v0.0.0-20260622110046-9e9c8727ea5d h1:HYgechrYY9e87Xl+qT2iIoylEpzp1643Ycb1hidacLk=
 github.com/go-filesystems/ext4 v0.0.0-20260622110046-9e9c8727ea5d/go.mod h1:Iwpw3dvpRI8bikASYJNA+qplmeUG0oVN6+mfyEzvZ7M=
+github.com/go-filesystems/ext4 v0.1.0 h1:BKMID0jfzLhigq9ym7bymQxAboPmk/XkPMS9BB3aB9Q=
+github.com/go-filesystems/ext4 v0.1.0/go.mod h1:Iwpw3dvpRI8bikASYJNA+qplmeUG0oVN6+mfyEzvZ7M=
 github.com/go-filesystems/fat32 v0.0.0-20260622110031-1d68bab25618 h1:1q3c+HJXQAuAfNstfEYXzpKML3UB90hM5keebG8Zue4=
 github.com/go-filesystems/fat32 v0.0.0-20260622110031-1d68bab25618/go.mod h1:rOT8cxm/YbwLTforZ/bd5QIiw0Ke+nZLboBH9Xa1U2g=
 github.com/go-filesystems/interface v0.0.0-20260622072638-0b01d4fb163f h1:5HnRecjgsND+ESeX7EgGNvYL5ofL+bzJTqcvcSGo1BI=
