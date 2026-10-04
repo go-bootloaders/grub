@@ -1,6 +1,6 @@
 module github.com/go-bootloaders/grub
 
-go 1.26.4
+go 1.27.1
 
 require (
 	github.com/go-filesystems/btrfs v0.1.0
