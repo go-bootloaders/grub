@@ -8,8 +8,8 @@ github.com/go-filesystems/ext4 v0.3.0 h1:VOb/mm9zAwtE/u2goyHmreOSx4LVEsyNideYFOk
 github.com/go-filesystems/ext4 v0.3.0/go.mod h1:1yHSrEW9jDX//E0P/oqz8PLKW1qPnff0puuPUY2omDM=
 github.com/go-filesystems/fat32 v0.5.0 h1:/BfabQ3IejcIQljlUWwSlqeGIwxRPI2o1lb+p4yHpOg=
 github.com/go-filesystems/fat32 v0.5.0/go.mod h1:87Sm1Nx+BUVPfjyFwwQ4dr11r5+kbeG9Umc7XlKDJiE=
-github.com/go-filesystems/interface v0.4.0 h1:JAekS0P8ocsFy8knnIZvkKJiifgRw3RKACkL3MQmBd4=
-github.com/go-filesystems/interface v0.4.0/go.mod h1:u9v8mvapNV8djzObwCECdyd2g6JBU6HNTR4EAqxOn6U=
+github.com/go-filesystems/interface v0.5.0 h1:AsbSXYG5cp497Ki0Ez88s8wwrVEmeRmFLd40T4d3UwA=
+github.com/go-filesystems/interface v0.5.0/go.mod h1:u9v8mvapNV8djzObwCECdyd2g6JBU6HNTR4EAqxOn6U=
 github.com/go-filesystems/uefi v0.3.0 h1:R6Njr/2D5LbSqSpQplTs2mErRQsx8YQhaUHkB+5H/80=
 github.com/go-filesystems/uefi v0.3.0/go.mod h1:amDXEO4IU17Me1DAcURgXEqL2JcXE1UqE0baZE4cx8k=
 github.com/go-tpm2/common v0.1.0 h1:VVxswlksVMyCKE9Ra0k1m8l22YSmCk2je8KGiwtY9bs=
