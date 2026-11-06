@@ -1,13 +1,13 @@
 github.com/anchore/go-lzo v0.1.1 h1:IwL/fvkdtlIrYIXck6WxZ3nb8WjjHziYYmGxlooyOnM=
 github.com/anchore/go-lzo v0.1.1/go.mod h1:3kLx0bve2oN1iDwgM1U5zGku1Tfbdb0No5qp1eL1fIk=
-github.com/go-filesystems/btrfs v0.4.0 h1:x2mAHLinjc+OPLbVlX3n33i21KUTRN1R+oCRdCncWS8=
-github.com/go-filesystems/btrfs v0.4.0/go.mod h1:lNXth+1XmXg0GMGW9eT9SkjhBY7H7Zp2U7f2BwXfLKE=
+github.com/go-filesystems/btrfs v0.5.0 h1:cntPk9XeqjAM+vuYTX5CIPEIk4d79dshNZ62q+W8aHQ=
+github.com/go-filesystems/btrfs v0.5.0/go.mod h1:lNXth+1XmXg0GMGW9eT9SkjhBY7H7Zp2U7f2BwXfLKE=
 github.com/go-filesystems/detect v0.5.1 h1:Toht4yRSBwjMvQNC+Z4EbDU2BYytpJv1TAtcdWaxnUw=
 github.com/go-filesystems/detect v0.5.1/go.mod h1:mS7HgwG4oFd2hP/eh+h4iXR5VN5y82+c6sX/uWa3zgs=
 github.com/go-filesystems/ext4 v0.4.0 h1:/DNcSo17xAPdoiXIQia0S5u13lOfjTqMnzId8zcYmlo=
 github.com/go-filesystems/ext4 v0.4.0/go.mod h1:l+aBSSSvtVoMhMCnQiWwFuc0Gh4KQZnPN5BaDH2Jcb0=
-github.com/go-filesystems/fat32 v0.10.0 h1:Tx0TgbrBsyyWlK0IhMlX9auR0aswTHfycFl/FnB/UDM=
-github.com/go-filesystems/fat32 v0.10.0/go.mod h1:1X9zusWgWQsowu/PVMDDzXNwRa3yVLjPm9wvAg21m5I=
+github.com/go-filesystems/fat32 v0.11.0 h1:dyG19y8UIx5jIOFR4sV3CmwGYrQu9NIttbRMQVvYvwE=
+github.com/go-filesystems/fat32 v0.11.0/go.mod h1:1X9zusWgWQsowu/PVMDDzXNwRa3yVLjPm9wvAg21m5I=
 github.com/go-filesystems/interface v0.5.0 h1:AsbSXYG5cp497Ki0Ez88s8wwrVEmeRmFLd40T4d3UwA=
 github.com/go-filesystems/interface v0.5.0/go.mod h1:u9v8mvapNV8djzObwCECdyd2g6JBU6HNTR4EAqxOn6U=
 github.com/go-filesystems/uefi v0.4.0 h1:CobSBUXA9mmG2Mudj1julQHbYcAb8mI6bslnplF/ScI=
